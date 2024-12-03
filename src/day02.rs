@@ -1,8 +1,7 @@
-use std::io::{self, BufRead};
-
+use crate::utils::parse_isize;
 use crate::Day;
 
-fn row_is_safe(row: &Vec<i32>) -> bool {
+fn row_is_safe(row: &[isize]) -> bool {
     let mut prev = row[0];
     let mut in_range = true;
     let mut increasing = true;
@@ -25,11 +24,14 @@ fn row_is_safe(row: &Vec<i32>) -> bool {
     (decreasing || increasing) && in_range
 }
 
-fn p1(list: &Vec<Vec<i32>>) -> i32 {
-    list.iter().map(row_is_safe).map(|b| b as i32).sum() 
+fn p1(list: &[Vec<isize>]) -> isize {
+    list.iter()
+        .map(|v| row_is_safe(v))
+        .map(|b| b as isize)
+        .sum()
 }
 
-fn p2(list: &Vec<Vec<i32>>) -> i32 {
+fn p2(list: &[Vec<isize>]) -> isize {
     let mut res = 0;
     for row in list {
         for idx in 0..row.len() {
@@ -45,37 +47,31 @@ fn p2(list: &Vec<Vec<i32>>) -> i32 {
 }
 
 pub struct Day02 {
-    data: Option<Vec<String>>
+    data: Option<Vec<String>>,
 }
 
 impl Day02 {
     pub fn new() -> Box<Self> {
-        Box::new(Self {
-            data: None
-        })
+        Box::new(Self { data: None })
     }
 }
 
 impl Day for Day02 {
+    fn solve(&self) -> (isize, isize) {
+        let mut list: Vec<Vec<isize>> = Vec::new();
+
+        for line in self.data.as_ref().unwrap() {
+            list.push(line.split(" ").map(parse_isize).collect());
+        }
+
+        (p1(&list), p2(&list))
+    }
+
     fn number(&self) -> u8 {
         2
     }
 
-    fn load_data(&mut self) {
-        let file = self.input_file();
-
-        let data: Vec<String> = io::BufReader::new(file).lines().collect::<Result<Vec<String>, _>>().unwrap();
-
-        self.data = Some(data);
-    }
-
-    fn solve(&self) -> (i32, i32) {
-        let mut list: Vec<Vec<i32>> = Vec::new();
-
-        for line in self.data.as_ref().unwrap() {
-            list.push(line.split(" ").map(|s| s.parse::<i32>()).collect::<Result<Vec<i32>, _>>().unwrap());
-        }
-
-        (p1(&list), p2(&list))
+    fn cache_input(&mut self, vec: Vec<String>) {
+        self.data = Some(vec);
     }
 }
