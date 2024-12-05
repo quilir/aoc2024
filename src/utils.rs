@@ -6,6 +6,10 @@ fn parse_usize_bytes(b: &[u8]) -> usize {
     res
 }
 
+pub fn parse_usize(s: &str) -> usize {
+    parse_usize_bytes(s.as_bytes())
+}
+
 pub fn parse_isize(s: &str) -> isize {
     let b = s.as_bytes();
     if b[0] == b'-' {
