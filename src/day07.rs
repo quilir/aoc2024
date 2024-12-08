@@ -24,7 +24,7 @@ fn p1(data: Vec<(isize, Vec<isize>)>) -> isize {
             sum += res;
         }
     }
-    sum as isize
+    sum
 }
 
 fn p2(data: Vec<(isize, Vec<isize>)>) -> isize {
@@ -59,7 +59,7 @@ fn p2(data: Vec<(isize, Vec<isize>)>) -> isize {
             sum += res;
         }
     }
-    sum as isize
+    sum
 }
 
 pub struct Day07 {

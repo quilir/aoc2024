@@ -13,8 +13,8 @@ fn in_loop(
     dir_idx: &usize,
     bounds: &(isize, isize),
 ) -> bool {
-    let mut pos = pos.clone();
-    let mut dir_idx = dir_idx.clone();
+    let mut pos = *pos;
+    let mut dir_idx = *dir_idx;
 
     let mut visited = [[[false; MAP_SIZE]; MAP_SIZE]; DIRS.len()];
     let mut dir = DIRS[dir_idx];
@@ -25,7 +25,7 @@ fn in_loop(
         }
         visited[dir_idx][pos.0 as usize][pos.1 as usize] = true;
         let next = (pos.0 + dir.0, pos.1 + dir.1);
-        if !in_bounds(&next, &bounds) {
+        if !in_bounds(&next, bounds) {
             return false;
         }
         if map[next.0 as usize][next.1 as usize] {
