@@ -15,29 +15,47 @@ fn in_loop(
 ) -> bool {
     let mut pos = *pos;
     let mut dir_idx = *dir_idx;
-
-    let mut visited = [[[false; MAP_SIZE]; MAP_SIZE]; DIRS.len()];
     let mut dir = DIRS[dir_idx];
 
-    while in_bounds(&pos, bounds) {
-        if visited[dir_idx][pos.0 as usize][pos.1 as usize] {
-            return true;
-        }
-        visited[dir_idx][pos.0 as usize][pos.1 as usize] = true;
-        let blanks_count = blanks[dir_idx][pos.0 as usize][pos.1 as usize];
+    let mut pos2 = pos;
+    let mut dir_idx2 = dir_idx;
+    let mut dir2 = dir;
+
+    #[inline]
+    fn hop(
+        pos: &mut (isize, isize),
+        dir_idx: &mut usize,
+        dir: &mut (isize, isize),
+        blanks: &[[[u8; 130]; 130]; DIRS.len()],
+    ) {
+        let blanks_count = blanks[*dir_idx][pos.0 as usize][pos.1 as usize];
 
         if blanks_count != 0 {
-            pos = (
+            *pos = (
                 pos.0 + dir.0 * blanks_count as isize,
                 pos.1 + dir.1 * blanks_count as isize,
             );
         }
 
-        dir_idx = (dir_idx + 1) % DIRS.len();
-        dir = DIRS[dir_idx];
+        *dir_idx = (*dir_idx + 1) % DIRS.len();
+        *dir = DIRS[*dir_idx];
     }
 
-    false
+    loop {
+        if !in_bounds(&pos, bounds) {
+            return false;
+        }
+        hop(&mut pos, &mut dir_idx, &mut dir, blanks);
+        if !in_bounds(&pos, bounds) {
+            return false;
+        }
+        hop(&mut pos, &mut dir_idx, &mut dir, blanks);
+        hop(&mut pos2, &mut dir_idx2, &mut dir2, blanks);
+
+        if pos.0 == pos2.0 && pos.1 == pos2.1 && dir == dir2 {
+            return true;
+        }
+    }
 }
 
 fn p1(
