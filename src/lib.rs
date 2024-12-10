@@ -12,6 +12,7 @@ mod day06;
 mod day07;
 mod day08;
 mod day09;
+mod day10;
 
 mod utils;
 
@@ -26,6 +27,7 @@ pub fn all_days() -> Vec<Box<dyn Day>> {
         day07::Day07::new(),
         day08::Day08::new(),
         day09::Day09::new(),
+        day10::Day10::new(),
     ]
 }
 
@@ -67,12 +69,16 @@ pub trait Day {
 
 #[cfg(test)]
 mod tests {
+    use std::time;
+
     use crate::all_days;
 
     #[test]
     fn test_all() {
+        let begin = time::Instant::now();
         for mut day in all_days() {
             day.describe();
         }
+        println!("{:?}", time::Instant::now() - begin);
     }
 }

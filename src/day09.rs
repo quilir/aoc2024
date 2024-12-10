@@ -123,7 +123,7 @@ impl Day for Day09 {
             block = !block;
         }
 
-        (p1(&vec), p2(&vec)) // 87145
+        (p1(&vec), p2(&vec))
     }
 
     fn number(&self) -> u8 {
