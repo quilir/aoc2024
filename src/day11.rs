@@ -1,4 +1,4 @@
-use std::{mem, usize};
+use std::mem;
 
 use rustc_hash::{FxBuildHasher, FxHashMap};
 

@@ -56,11 +56,9 @@ fn attempt_segment_move(
     spaces: &mut [BinaryHeap<Reverse<usize>>],
     data: &mut [i32],
 ) {
-    if let Some((Reverse(space_pos), space_size)) = (size..10)
-        .map(|size| (spaces[size].peek().copied(), size))
-        .filter(|(res, _)| res.is_some())
-        .map(|(res, size)| (res.unwrap(), size))
-        .min_by_key(|(Reverse(pos), _)| *pos)
+    if let Some((space_pos, space_size)) = (size..10)
+        .filter_map(|size| (spaces[size].peek().map(|Reverse(v)| (*v, size))))
+        .min()
     {
         if space_pos > pos {
             return;

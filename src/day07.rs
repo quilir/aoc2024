@@ -1,65 +1,87 @@
 use crate::{utils::parse_usize, Day};
 
-fn p1(data: Vec<(isize, Vec<isize>)>) -> isize {
-    let mut sum = 0;
-    for (res, nums) in data.into_iter() {
-        let mut set = vec![res];
-        let mut new_set = Vec::new();
-        for num in nums.iter().rev() {
-            for prev in set.iter() {
+fn rows_mul_sub(data: &[(isize, Vec<isize>)]) -> Vec<bool> {
+    data.iter()
+        .map(|(res, nums)| {
+            let mut heap = vec![(*res, nums.len() - 1)];
+            let mut found = false;
+
+            while let Some((prev, pos)) = heap.pop() {
+                let num = nums[pos];
+                if pos == 0 {
+                    if prev == num {
+                        found = true;
+                        break;
+                    }
+                    continue;
+                }
                 if prev % num == 0 {
-                    new_set.push(prev / num);
+                    heap.push((prev / num, pos - 1));
                 }
 
                 let sub = prev - num;
                 if sub >= 0 {
-                    new_set.push(sub);
+                    heap.push((sub, pos - 1));
                 }
             }
-            set.clear();
-            set.append(&mut new_set);
-        }
-
-        if set.into_iter().any(|v| v == 0) {
-            sum += res;
-        }
-    }
-    sum
+            found
+        })
+        .collect()
 }
 
-fn p2(data: Vec<(isize, Vec<isize>)>) -> isize {
-    let mut sum = 0;
-    for (res, nums) in data.into_iter() {
-        let mut set = vec![res];
-        let mut new_set = Vec::new();
-        for num in nums.into_iter().rev() {
-            let mut decimal = 10;
-            while decimal <= num {
-                decimal *= 10;
+fn p1(data: &[(isize, Vec<isize>)], rows_passing: &[bool]) -> isize {
+    data.iter()
+        .zip(rows_passing)
+        .map(|((val, _), passes)| *passes as isize * *val)
+        .sum()
+}
+
+fn p2(data: &[(isize, Vec<isize>)], rows_passing: &[bool]) -> isize {
+    data.iter()
+        .zip(rows_passing)
+        .map(|((res, nums), passes)| {
+            if *passes {
+                *res
+            } else {
+                let mut found = false;
+                let mut heap = vec![(*res, nums.len() - 1)];
+                let decimals = nums
+                    .iter()
+                    .map(|num| {
+                        let mut decimal = 10;
+                        while decimal <= *num {
+                            decimal *= 10;
+                        }
+                        decimal
+                    })
+                    .collect::<Vec<_>>();
+
+                while let Some((prev, pos)) = heap.pop() {
+                    let num = nums[pos];
+                    if pos == 0 {
+                        if prev == num {
+                            found = true;
+                            break;
+                        }
+                        continue;
+                    }
+                    if prev % num == 0 {
+                        heap.push((prev / num, pos - 1));
+                    }
+
+                    let sub = prev - num;
+                    if sub >= 0 {
+                        heap.push((sub, pos - 1));
+                    }
+                    if prev % decimals[pos] == num {
+                        heap.push((prev / decimals[pos], pos - 1));
+                    }
+                }
+
+                found as isize * *res
             }
-            for prev in set.iter() {
-                if prev % num == 0 {
-                    new_set.push(prev / num);
-                }
-
-                let sub = prev - num;
-                if sub >= 0 {
-                    new_set.push(sub);
-                }
-
-                if prev % decimal == num {
-                    new_set.push(prev / decimal);
-                }
-            }
-            set.clear();
-            set.append(&mut new_set);
-        }
-
-        if set.into_iter().any(|v| v == 0) {
-            sum += res;
-        }
-    }
-    sum
+        })
+        .sum()
 }
 
 pub struct Day07 {
@@ -92,7 +114,9 @@ impl Day for Day07 {
             })
             .collect();
 
-        (p1(data.clone()), p2(data))
+        let rows_passing_p1 = rows_mul_sub(&data);
+
+        (p1(&data, &rows_passing_p1), p2(&data, &rows_passing_p1))
     }
 
     fn number(&self) -> u8 {
