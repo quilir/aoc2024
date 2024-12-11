@@ -13,6 +13,7 @@ mod day07;
 mod day08;
 mod day09;
 mod day10;
+mod day11;
 
 mod utils;
 
@@ -28,6 +29,7 @@ pub fn all_days() -> Vec<Box<dyn Day>> {
         day08::Day08::new(),
         day09::Day09::new(),
         day10::Day10::new(),
+        day11::Day11::new(),
     ]
 }
 
