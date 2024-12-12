@@ -2,43 +2,25 @@ use num_complex::Complex;
 
 use crate::Day;
 
-const MAP_SIZE: usize = 140;
+const MAP_SIZE: usize = 140 + 2;
 
-fn value_at_pos(
-    pos: &Complex<isize>,
-    map: &[[u8; MAP_SIZE]; MAP_SIZE],
-    bounds: &Complex<isize>,
-) -> u8 {
-    if pos.re >= 0 && pos.re < bounds.re && pos.im >= 0 && pos.im < bounds.im {
-        map[pos.re as usize][pos.im as usize]
-    } else {
-        0
-    }
+#[inline]
+fn value_at_pos(pos: &Complex<isize>, map: &[[u8; MAP_SIZE]; MAP_SIZE]) -> u8 {
+    map[pos.re as usize][pos.im as usize]
 }
 
+#[inline]
 fn visit_region(
-    pos: Complex<isize>,
+    value: u8,
+    to_vis: &mut Vec<Complex<isize>>,
     map: &[[u8; MAP_SIZE]; MAP_SIZE],
     vis: &mut [[bool; MAP_SIZE]; MAP_SIZE],
-    bounds: &Complex<isize>,
 ) -> (usize, usize, usize) {
     let mut area = 0;
     let mut perimeter = 0;
     let mut corners = 0;
-    let mut to_vis = vec![pos];
-    let value = map[pos.re as usize][pos.im as usize];
 
-    let dirs = [
-        Complex::I,
-        Complex::<isize>::I + Complex::ONE,
-        Complex::ONE,
-        Complex::<isize>::ONE - Complex::I,
-        -Complex::I,
-        -Complex::<isize>::I - Complex::ONE,
-        -Complex::ONE,
-        -Complex::<isize>::ONE + Complex::I,
-        Complex::I,
-    ];
+    let dirs = [Complex::I, Complex::ONE, -Complex::I, -Complex::ONE];
 
     while let Some(pos) = to_vis.pop() {
         if vis[pos.re as usize][pos.im as usize] {
@@ -47,14 +29,12 @@ fn visit_region(
         vis[pos.re as usize][pos.im as usize] = true;
         area += 1;
 
-        let mut same_val = [false; 9];
-        for i in 0..dirs.len() {
-            same_val[i] = value_at_pos(&(pos + dirs[i]), map, bounds) == value;
-        }
+        let mut same_val = [false; 4];
 
-        for neigh in [0, 2, 4, 6] {
-            if same_val[neigh] {
-                let next = pos + dirs[neigh];
+        for dir in 0..4 {
+            same_val[dir] = value_at_pos(&(pos + dirs[dir]), map) == value;
+            if same_val[dir] {
+                let next = pos + dirs[dir];
                 if !vis[next.re as usize][next.im as usize] {
                     to_vis.push(next);
                 }
@@ -63,9 +43,11 @@ fn visit_region(
             }
         }
 
-        for n in [1, 3, 5, 7] {
-            if !same_val[n - 1] && !same_val[n + 1]
-                || same_val[n - 1] && same_val[n + 1] && !same_val[n]
+        for (a, b) in [(0, 1), (1, 2), (2, 3), (3, 0)] {
+            if !same_val[a] && !same_val[b]
+                || same_val[a]
+                    && same_val[b]
+                    && value_at_pos(&(pos + dirs[a] + dirs[b]), map) != value
             {
                 corners += 1;
             }
@@ -101,8 +83,9 @@ impl Day12 {
 impl Day for Day12 {
     fn solve(&self) -> (isize, isize) {
         let mut map = [[0; MAP_SIZE]; MAP_SIZE];
-        let mut bounds = 1.into();
+        let mut bounds = Complex::ZERO;
         let mut vis = [[false; MAP_SIZE]; MAP_SIZE];
+        let mut to_vis = Vec::with_capacity(300);
 
         self.data
             .as_ref()
@@ -111,18 +94,22 @@ impl Day for Day12 {
             .enumerate()
             .for_each(|(row, vec)| {
                 vec.as_bytes().iter().enumerate().for_each(|(col, v)| {
-                    map[row][col] = *v;
-                    bounds = Complex::new((row + 1) as isize, (col + 1) as isize);
+                    map[row + 1][col + 1] = *v;
+                    bounds = Complex::new((row + 2) as isize, (col + 2) as isize);
                 })
             });
-        let reports: Vec<_> = (0..bounds.re)
+        let reports: Vec<_> = (1..bounds.re)
             .into_iter()
             .flat_map(|row| {
-                (0..bounds.im)
+                (1..bounds.im)
                     .into_iter()
                     .map(move |col: isize| Complex::new(row, col))
             })
-            .map(|pos| visit_region(pos, &map, &mut vis, &bounds))
+            .map(|pos| {
+                let value: u8 = map[pos.re as usize][pos.im as usize];
+                to_vis.push(pos);
+                visit_region(value, &mut to_vis, &map, &mut vis)
+            })
             .collect();
 
         (p1(&reports), p2(&reports))

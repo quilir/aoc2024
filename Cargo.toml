@@ -14,3 +14,7 @@ criterion = "0.5"
 [[bench]]
 name = "all_days"
 harness = false
+
+[profile.profiling]
+debug = true
+inherits = "release"
