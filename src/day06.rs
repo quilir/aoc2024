@@ -1,3 +1,7 @@
+use std::collections::HashSet;
+
+use rustc_hash::{FxBuildHasher, FxHashSet};
+
 use crate::Day;
 
 const MAP_SIZE: usize = 130;
@@ -7,55 +11,77 @@ fn in_bounds(pos: &(isize, isize), bounds: &(isize, isize)) -> bool {
     pos.0 >= 0 && pos.0 < bounds.0 && pos.1 >= 0 && pos.1 < bounds.1
 }
 
+#[inline]
+fn hop(
+    pos: &mut (isize, isize),
+    dir_idx: &mut usize,
+    blanks: &[[[u8; 130]; 130]; DIRS.len()],
+    wall_pos: &(isize, isize),
+) {
+    let blanks_count = blanks[*dir_idx][pos.0 as usize][pos.1 as usize] as isize;
+    let blanks_count = match dir_idx {
+        0 => {
+            if pos.1 == wall_pos.1 && pos.0 > wall_pos.0 && pos.0 - blanks_count <= wall_pos.0 {
+                pos.0 - wall_pos.0 - 1
+            } else {
+                blanks_count
+            }
+        }
+        1 => {
+            if pos.0 == wall_pos.0 && pos.1 < wall_pos.1 && pos.1 + blanks_count >= wall_pos.1 {
+                wall_pos.1 - pos.1 - 1
+            } else {
+                blanks_count
+            }
+        }
+        2 => {
+            if pos.1 == wall_pos.1 && pos.0 < wall_pos.0 && pos.0 + blanks_count >= wall_pos.0 {
+                wall_pos.0 - pos.0 - 1
+            } else {
+                blanks_count
+            }
+        }
+        3 => {
+            if pos.0 == wall_pos.0 && pos.1 > wall_pos.1 && pos.1 - blanks_count <= wall_pos.1 {
+                pos.1 - wall_pos.1 - 1
+            } else {
+                blanks_count
+            }
+        }
+        _ => panic!(),
+    };
+
+    if blanks_count != 0 {
+        *pos = (
+            pos.0 + DIRS[*dir_idx].0 * blanks_count as isize,
+            pos.1 + DIRS[*dir_idx].1 * blanks_count as isize,
+        );
+    }
+
+    *dir_idx = (*dir_idx + 1) % DIRS.len();
+}
+
+#[inline]
 fn in_loop(
     blanks: &[[[u8; MAP_SIZE]; MAP_SIZE]; DIRS.len()],
     pos: &(isize, isize),
     dir_idx: &usize,
     bounds: &(isize, isize),
+    vis_set: &mut HashSet<((isize, isize), usize), FxBuildHasher>,
 ) -> bool {
     let mut pos = *pos;
     let mut dir_idx = *dir_idx;
-    let mut dir = DIRS[dir_idx];
 
-    let mut pos2 = pos;
-    let mut dir_idx2 = dir_idx;
-    let mut dir2 = dir;
+    let wall_pos = (pos.0 + DIRS[dir_idx].0, pos.1 + DIRS[dir_idx].1);
 
-    #[inline]
-    fn hop(
-        pos: &mut (isize, isize),
-        dir_idx: &mut usize,
-        dir: &mut (isize, isize),
-        blanks: &[[[u8; 130]; 130]; DIRS.len()],
-    ) {
-        let blanks_count = blanks[*dir_idx][pos.0 as usize][pos.1 as usize];
-
-        if blanks_count != 0 {
-            *pos = (
-                pos.0 + dir.0 * blanks_count as isize,
-                pos.1 + dir.1 * blanks_count as isize,
-            );
-        }
-
-        *dir_idx = (*dir_idx + 1) % DIRS.len();
-        *dir = DIRS[*dir_idx];
-    }
-
-    loop {
-        if !in_bounds(&pos, bounds) {
-            return false;
-        }
-        hop(&mut pos, &mut dir_idx, &mut dir, blanks);
-        if !in_bounds(&pos, bounds) {
-            return false;
-        }
-        hop(&mut pos, &mut dir_idx, &mut dir, blanks);
-        hop(&mut pos2, &mut dir_idx2, &mut dir2, blanks);
-
-        if pos.0 == pos2.0 && pos.1 == pos2.1 && dir == dir2 {
+    while in_bounds(&pos, bounds) {
+        if !vis_set.insert((pos, dir_idx)) {
             return true;
         }
+        hop(&mut pos, &mut dir_idx, blanks, &wall_pos);
     }
+
+    false
 }
 
 fn p1(
@@ -162,11 +188,13 @@ fn p2(
     bounds: (isize, isize),
 ) -> isize {
     let mut visited = [[false; MAP_SIZE]; MAP_SIZE];
-    let mut blanks = gen_blanks_table(&map, &bounds);
+    let blanks = gen_blanks_table(&map, &bounds);
 
     let mut count = 0;
     let mut dir_idx = 0;
     let mut dir = DIRS[dir_idx];
+
+    let mut vis_set = FxHashSet::with_capacity_and_hasher(1000, FxBuildHasher);
 
     loop {
         visited[pos.0 as usize][pos.1 as usize] = true;
@@ -180,14 +208,11 @@ fn p2(
         } else {
             if !visited[next.0 as usize][next.1 as usize] {
                 map[next.0 as usize][next.1 as usize] = true;
-                calc_blanks_row(next.0, &map, &bounds, &mut blanks);
-                calc_blanks_col(next.1, &map, &bounds, &mut blanks);
 
-                count += in_loop(&blanks, &pos, &dir_idx, &bounds) as isize;
+                count += in_loop(&blanks, &pos, &dir_idx, &bounds, &mut vis_set) as isize;
+                vis_set.clear();
 
                 map[next.0 as usize][next.1 as usize] = false;
-                calc_blanks_row(next.0, &map, &bounds, &mut blanks);
-                calc_blanks_col(next.1, &map, &bounds, &mut blanks);
             }
 
             pos = next;

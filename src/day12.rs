@@ -99,12 +99,7 @@ impl Day for Day12 {
                 })
             });
         let reports: Vec<_> = (1..bounds.re)
-            .into_iter()
-            .flat_map(|row| {
-                (1..bounds.im)
-                    .into_iter()
-                    .map(move |col: isize| Complex::new(row, col))
-            })
+            .flat_map(|row| (1..bounds.im).map(move |col: isize| Complex::new(row, col)))
             .map(|pos| {
                 let value: u8 = map[pos.re as usize][pos.im as usize];
                 to_vis.push(pos);
