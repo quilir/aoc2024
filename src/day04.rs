@@ -1,72 +1,42 @@
 use crate::Day;
 
-const DIRECTIONS: [(isize, isize); 8] = [
-    (-1, -1),
-    (-1, 0),
-    (-1, 1),
-    (0, -1),
-    (0, 1),
-    (1, -1),
-    (1, 0),
-    (1, 1),
-];
-
+const MAP_SIZE: usize = 140 + 6;
+const DIRECTIONS: [(isize, isize); 4] = [(-1, 1), (0, 1), (1, 0), (1, 1)];
 const DIAGONAL_PAIRS: [[(isize, isize); 2]; 2] = [[(-1, -1), (1, 1)], [(-1, 1), (1, -1)]];
 
-fn in_bounds(x: isize, y: isize, x_bound: isize, y_bound: isize) -> bool {
-    x >= 0 && y >= 0 && x < x_bound && y < y_bound
-}
-
-fn p1(matrix: &[Vec<u8>]) -> isize {
-    let rows = matrix.len() as isize;
-    let cols = matrix[0].len() as isize;
-
+fn p1(matrix: &[[u8; MAP_SIZE]; MAP_SIZE]) -> isize {
     let mut found = 0;
-    for row in 0..rows {
-        for col in 0..cols {
-            if matrix[row as usize][col as usize] != b'X' {
-                continue;
-            }
-
+    for row in 3..(MAP_SIZE - 3) as isize {
+        for col in 3..(MAP_SIZE - 3) as isize {
             for (dr, dc) in DIRECTIONS {
-                if !in_bounds(row + 3 * dr, col + 3 * dc, rows, cols) {
-                    continue;
+                let mut res: usize = 0;
+                for i in 0..4 {
+                    res <<= 8;
+                    res += matrix[(row + dr * i) as usize][(col + dc * i) as usize] as usize;
                 }
-                let mut curr_row = row;
-                let mut curr_col = col;
-                let mut ok = true;
-                for char in [b'M', b'A', b'S'] {
-                    curr_row += dr;
-                    curr_col += dc;
-                    if matrix[curr_row as usize][curr_col as usize] != char {
-                        ok = false;
-                        break;
-                    }
+                if res == 0x584d4153 || res == 0x53414d58 {
+                    found += 1;
                 }
-                found += ok as isize;
             }
         }
     }
     found
 }
 
-fn p2(matrix: &[Vec<u8>]) -> isize {
-    let rows = matrix.len() as isize;
-    let cols = matrix[0].len() as isize;
-
+fn p2(matrix: &[[u8; MAP_SIZE]; MAP_SIZE]) -> isize {
     let mut found = 0;
-    for row in 1..rows - 1 {
-        for col in 1..cols - 1 {
+    for row in 4..(MAP_SIZE - 4) as isize {
+        for col in 4..(MAP_SIZE - 4) as isize {
             if matrix[row as usize][col as usize] != b'A' {
                 continue;
             }
 
             let mut ok = true;
             for pair in DIAGONAL_PAIRS {
-                let char1 = matrix[(row + pair[0].0) as usize][(col + pair[0].1) as usize];
-                let char2 = matrix[(row + pair[1].0) as usize][(col + pair[1].1) as usize];
+                let char1 = matrix[(row + pair[0].0) as usize][(col + pair[0].1) as usize] as i8;
+                let char2 = matrix[(row + pair[1].0) as usize][(col + pair[1].1) as usize] as i8;
 
-                if !(char1 == b'M' && char2 == b'S' || char1 == b'S' && char2 == b'M') {
+                if (char1 - char2).abs() != 6 {
                     ok = false;
                     break;
                 }
@@ -88,15 +58,20 @@ impl Day04 {
 
 impl Day for Day04 {
     fn solve(&self) -> (isize, isize) {
-        let vec: Vec<_> = self
-            .data
-            .clone()
+        let mut map = [[b'.'; MAP_SIZE]; MAP_SIZE];
+        self.data
+            .as_ref()
             .unwrap()
-            .into_iter()
-            .map(|s| s.as_bytes().to_vec())
-            .collect();
+            .iter()
+            .enumerate()
+            .for_each(|(row, s)| {
+                s.as_bytes()
+                    .iter()
+                    .enumerate()
+                    .for_each(|(col, v)| map[row + 3][col + 3] = *v)
+            });
 
-        (p1(&vec), p2(&vec))
+        (p1(&map), p2(&map))
     }
 
     fn number(&self) -> u8 {

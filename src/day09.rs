@@ -2,96 +2,97 @@ use std::{cmp::Reverse, collections::BinaryHeap};
 
 use crate::Day;
 
-fn checksum(arr: &[i32]) -> isize {
-    let mut res = 0;
-    for (idx, v) in arr.iter().enumerate() {
-        if *v != -1 {
-            res += *v as isize * idx as isize;
-        }
-    }
+const TRIANGLE_NUM: [isize; 10] = [0, 0, 1, 3, 6, 10, 15, 21, 28, 36];
 
-    res
+#[inline]
+fn calc_segment_val(val: isize, pos: isize, len: isize) -> isize {
+    val * (pos * len + TRIANGLE_NUM[len as usize])
 }
 
-fn p1(data: &[i32]) -> isize {
-    let mut data = data.to_vec();
-    let mut i0 = 0;
+fn p1(data: &[(isize, isize)]) -> isize {
+    let mut i0 = 1;
     let mut i1 = data.len() - 1;
+    let mut checksum = 0;
 
-    loop {
-        while i0 < data.len() - 1 && data[i0] >= 0 {
-            i0 += 1;
-        }
-        while i1 > 0 && data[i1] < 0 {
-            i1 -= 1;
-        }
+    let (mut space_pos, mut space_len) = data[i0];
+    let (mut data_pos, mut data_len) = data[i1];
 
-        if i0 < i1 {
-            data.swap(i0, i1);
-        } else {
-            break;
+    while i0 < i1 {
+        let swap_len = std::cmp::min(space_len, data_len);
+        checksum += calc_segment_val((i1 / 2) as isize, space_pos, swap_len);
+
+        space_len -= swap_len;
+        data_len -= swap_len;
+        space_pos += swap_len;
+
+        if space_len == 0 {
+            i0 += 2;
+            (space_pos, space_len) = data[i0];
+        }
+        if data_len == 0 {
+            i1 -= 2;
+            (data_pos, data_len) = data[i1];
         }
     }
-    checksum(&data)
+    while i1 > 0 {
+        checksum += calc_segment_val((i1 / 2) as isize, data_pos, data_len);
+        i1 -= 2;
+        (data_pos, data_len) = data[i1];
+    }
+    checksum
 }
 
-fn find_spaces(data: &[i32]) -> Vec<BinaryHeap<Reverse<usize>>> {
-    let mut heaps = vec![BinaryHeap::new(); 10];
-    let mut space_len = 0;
-    for (idx, v) in data.iter().enumerate() {
-        if *v == -1 {
-            space_len += 1;
-        } else if space_len > 0 {
-            heaps[space_len].push(Reverse(idx - space_len));
-            space_len = 0;
-        }
+#[inline]
+fn build_heaps(data: &[(isize, isize)]) -> Vec<BinaryHeap<Reverse<isize>>> {
+    let mut i = 1;
+    let mut heaps = vec![BinaryHeap::with_capacity(1000); 10];
+    while i < data.len() {
+        let (pos, len) = data[i];
+        heaps[len as usize].push(Reverse(pos));
+        i += 2;
     }
 
     heaps
 }
 
+#[inline]
 fn attempt_segment_move(
-    size: usize,
-    pos: usize,
-    spaces: &mut [BinaryHeap<Reverse<usize>>],
-    data: &mut [i32],
+    pos: isize,
+    len: isize,
+    val: isize,
+    spaces: &mut [BinaryHeap<Reverse<isize>>],
+    checksum: &mut isize,
 ) {
-    if let Some((space_pos, space_size)) = (size..10)
-        .filter_map(|size| (spaces[size].peek().map(|Reverse(v)| (*v, size))))
+    if let Some((space_pos, space_size)) = (len..10)
+        .filter_map(|size| (spaces[size as usize].peek().map(|Reverse(v)| (*v, size))))
         .min()
     {
         if space_pos > pos {
+            *checksum += calc_segment_val(val, pos, len);
             return;
         }
-        spaces[space_size].pop();
-        let num = data[pos];
-        for j in 0..size {
-            data[space_pos + j] = num;
-            data[pos + j] = -1;
+
+        *checksum += calc_segment_val(val, space_pos, len);
+        spaces[space_size as usize].pop();
+        if space_size - len > 0 {
+            spaces[(space_size - len) as usize].push(Reverse(space_pos + len));
         }
-        if space_size - size > 0 {
-            spaces[space_size - size].push(Reverse(space_pos + size));
-        }
+    } else {
+        *checksum += calc_segment_val(val, pos, len);
     }
 }
 
-fn p2(data: &[i32]) -> isize {
-    let mut data_mut = data.to_vec();
-    let mut spaces = find_spaces(data);
-    let mut prev = -1;
-    let mut size = 0;
+fn p2(data: &[(isize, isize)]) -> isize {
+    let mut spaces = build_heaps(data);
+    let mut checksum = 0;
+    let mut i = data.len() - 1;
 
-    for (idx, v) in data.iter().enumerate().rev() {
-        if *v != prev {
-            if prev != -1 {
-                attempt_segment_move(size, idx + 1, &mut spaces, &mut data_mut);
-            }
-            size = 0;
-        }
-        prev = *v;
-        size += 1;
+    while i > 0 {
+        let (pos, len) = data[i];
+        attempt_segment_move(pos, len, (i/2) as isize, &mut spaces, &mut checksum);
+        i -= 2;
     }
-    checksum(&data_mut)
+    checksum
 }
 
 pub struct Day09 {
@@ -106,22 +107,18 @@ impl Day09 {
 
 impl Day for Day09 {
     fn solve(&self) -> (isize, isize) {
-        let mut vec = Vec::new();
-        let mut block = true;
-        let mut next_val = 0;
+        let mut pos = 0;
+        let data = self.data.as_ref().unwrap()[0]
+            .as_bytes()
+            .iter()
+            .map(|char| {
+                let len = (char - b'0') as isize;
+                pos += len;
+                (pos - len, len)
+            })
+            .collect::<Vec<_>>();
 
-        for char in self.data.as_ref().unwrap()[0].as_bytes() {
-            let num = char - b'0';
-            if block {
-                (0..num).for_each(|_| vec.push(next_val));
-                next_val += 1;
-            } else {
-                (0..num).for_each(|_| vec.push(-1));
-            }
-            block = !block;
-        }
-
-        (p1(&vec), p2(&vec))
+        (p1(&data), p2(&data))
     }
 
     fn number(&self) -> u8 {

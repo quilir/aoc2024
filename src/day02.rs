@@ -1,49 +1,54 @@
 use crate::utils::parse_isize;
 use crate::Day;
 
-fn row_is_safe(row: &[isize]) -> bool {
-    let mut prev = row[0];
-    let mut in_range = true;
-    let mut increasing = true;
-    let mut decreasing = true;
+const MAX_LEN: usize = 8;
 
-    for i in &row[1..] {
-        let diff = *i - prev;
-        if diff >= 0 {
-            decreasing = false;
-        }
-        if diff <= 0 {
-            increasing = false;
-        }
-        if diff.abs() < 1 || diff.abs() > 3 {
-            in_range = false;
-        }
-        prev = *i;
+#[inline]
+fn calc_diff_repr(a: isize, b: isize) -> i8 {
+    match b - a {
+        (1..=3) => 1,
+        (-3..=-1) => -1,
+        _ => 0,
     }
-
-    (decreasing || increasing) && in_range
 }
 
-fn p1(list: &[Vec<isize>]) -> isize {
-    list.iter()
-        .map(|v| row_is_safe(v))
-        .map(|b| b as isize)
-        .sum()
-}
-
-fn p2(list: &[Vec<isize>]) -> isize {
+#[inline]
+fn row_is_safe(row: &[isize], len: usize) -> (i16, i16) {
     let mut res = 0;
-    for row in list {
-        for idx in 0..row.len() {
-            let mut row = row.clone();
-            row.remove(idx);
-            if row_is_safe(&row) {
-                res += 1;
-                break;
-            }
+    for i in 1..len {
+        res += calc_diff_repr(row[i - 1], row[i]);
+    }
+
+    if res.abs() == (len - 1) as i8 {
+        return (1, 1);
+    }
+
+    for i in 0..len {
+        let mut res = res;
+        if i > 0 {
+            res -= calc_diff_repr(row[i - 1], row[i]);
+        }
+        if i < len - 1 {
+            res -= calc_diff_repr(row[i], row[i + 1]);
+        }
+        if i > 0 && i < len - 1 {
+            res += calc_diff_repr(row[i - 1], row[i + 1]);
+        }
+
+        if res.abs() == (len - 2) as i8 {
+            return (0, 1);
         }
     }
-    res
+
+    return (0, 0);
+}
+
+fn p1(res: &(i16, i16)) -> isize {
+    res.0 as isize
+}
+
+fn p2(res: &(i16, i16)) -> isize {
+    res.1 as isize
 }
 
 pub struct Day02 {
@@ -58,13 +63,28 @@ impl Day02 {
 
 impl Day for Day02 {
     fn solve(&self) -> (isize, isize) {
-        let mut list: Vec<Vec<isize>> = Vec::new();
+        let mut report = [0; MAX_LEN];
 
-        for line in self.data.as_ref().unwrap() {
-            list.push(line.split(" ").map(parse_isize).collect());
-        }
+        let res = self
+            .data
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|line| {
+                let mut len = 0;
+                for (idx, v) in line.split(' ').enumerate() {
+                    len += 1;
+                    report[idx] = parse_isize(v);
+                }
+                row_is_safe(&report, len)
+            })
+            .fold((0,0), |mut acc, v| {
+                acc.0 += v.0;
+                acc.1 += v.1;
+                acc
+            });
 
-        (p1(&list), p2(&list))
+        (p1(&res), p2(&res))
     }
 
     fn number(&self) -> u8 {
