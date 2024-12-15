@@ -40,7 +40,7 @@ fn row_is_safe(row: &[isize], len: usize) -> (i16, i16) {
         }
     }
 
-    return (0, 0);
+    (0, 0)
 }
 
 fn p1(res: &(i16, i16)) -> isize {
@@ -78,7 +78,7 @@ impl Day for Day02 {
                 }
                 row_is_safe(&report, len)
             })
-            .fold((0,0), |mut acc, v| {
+            .fold((0, 0), |mut acc, v| {
                 acc.0 += v.0;
                 acc.1 += v.1;
                 acc

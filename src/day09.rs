@@ -89,7 +89,7 @@ fn p2(data: &[(isize, isize)]) -> isize {
 
     while i > 0 {
         let (pos, len) = data[i];
-        attempt_segment_move(pos, len, (i/2) as isize, &mut spaces, &mut checksum);
+        attempt_segment_move(pos, len, (i / 2) as isize, &mut spaces, &mut checksum);
         i -= 2;
     }
     checksum

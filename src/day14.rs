@@ -1,3 +1,5 @@
+use std::ops::Rem;
+
 use crate::{utils::parse_isize, Day};
 
 // x, y, dx, dy
@@ -41,7 +43,6 @@ fn p2(robots: &[Robot]) -> isize {
             occ.into_iter()
                 .enumerate()
                 .max_by_key(|(_, v)| *v)
-                .clone()
                 .unwrap()
                 .1
         })
@@ -58,7 +59,6 @@ fn p2(robots: &[Robot]) -> isize {
             occ.into_iter()
                 .enumerate()
                 .max_by_key(|(_, v)| *v)
-                .clone()
                 .unwrap()
                 .1
         })
@@ -66,14 +66,7 @@ fn p2(robots: &[Robot]) -> isize {
         .max_by_key(|(_, v)| *v)
         .unwrap()
         .0;
-
-    for i in 0..SPACE_X * SPACE_Y {
-        if i % SPACE_X == cong_x && i % SPACE_Y == cong_y {
-            return i as isize;
-        }
-    }
-
-    unreachable!()
+    (cong_x * 51 * 103 + cong_y * 51 * 101).rem(SPACE_X * SPACE_Y) as isize
 }
 
 pub struct Day14 {
