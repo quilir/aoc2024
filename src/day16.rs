@@ -1,8 +1,9 @@
-use std::{cmp::Reverse, ops::Rem};
+use std::{collections::VecDeque, mem, ops::Rem};
 
 use crate::Day;
 
 const MAP_SIZE: usize = 141;
+const UNVISITED_VAL: u32 = u32::MAX / 2;
 
 const DIRS: [(isize, isize); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
 
@@ -47,44 +48,50 @@ impl Day for Day16 {
         }
 
         // x -> y -> dir -> lowest cost to get there from start
-        let mut min_costs = [[[usize::MAX / 2; MAP_SIZE]; MAP_SIZE]; 4];
-        // faster alternative to a single (DFS-)heap
-        // one (DFS-)heap for each number of turns (cost % 1000)
-        let mut tiered_heap = vec![Vec::new(); 300];
-        tiered_heap[0].push((Reverse(0), start, 1));
-        let mut p1_result = usize::MAX / 2;
+        let mut min_costs = [[[UNVISITED_VAL; MAP_SIZE]; MAP_SIZE]; 4];
 
-        for turn in 0..tiered_heap.len() {
-            while let Some((Reverse(cost), pos, dir)) = tiered_heap[turn].pop() {
-                if cost > min_costs[dir][pos.0 as usize][pos.1 as usize] || cost > p1_result {
-                    continue;
-                }
-                min_costs[dir][pos.0 as usize][pos.1 as usize] = cost;
+        // one heap for current number of turns and other for the +1 one
+        let mut curr_queue = VecDeque::new();
+        let mut next_queue = VecDeque::new();
+        curr_queue.push_back((0_u32, start, 1));
+        let mut p1_result = UNVISITED_VAL;
 
-                if pos == end {
-                    p1_result = cost;
+        // pseudo-Dijkstra
+        while !curr_queue.is_empty() {
+            while let Some((mut cost, mut pos, dir)) = curr_queue.pop_front() {
+                if cost > p1_result {
                     continue;
                 }
 
-                let next = (pos.0 + DIRS[dir].0, pos.1 + DIRS[dir].1);
-                for (add_cost, dir, next) in [
-                    (1, dir, next),
-                    (1000, (dir + 1).rem(4), pos),
-                    (1000, (dir - 1).rem(4), pos),
-                ] {
-                    if !map[next.0 as usize][next.1 as usize]
-                        && min_costs[dir][next.0 as usize][next.1 as usize] > add_cost + cost
-                    {
-                        tiered_heap[(add_cost + cost) / 1000].push((
-                            Reverse(add_cost + cost),
-                            next,
-                            dir,
-                        ));
+                // visit pos and all next ahead that are unvisited
+                while !map[pos.0 as usize][pos.1 as usize]
+                    && min_costs[dir][pos.0 as usize][pos.1 as usize] == UNVISITED_VAL
+                {
+                    min_costs[dir][pos.0 as usize][pos.1 as usize] = cost;
+                    if pos == end {
+                        p1_result = cost;
+                        break;
                     }
+
+                    // perform moves to left and right
+                    for dir in [(dir + 1).rem(4), (dir - 1).rem(4)] {
+                        let next = (pos.0 + DIRS[dir].0, pos.1 + DIRS[dir].1);
+                        if min_costs[dir][pos.0 as usize][pos.1 as usize] == UNVISITED_VAL
+                            && !map[next.0 as usize][next.1 as usize]
+                        {
+                            min_costs[dir][pos.0 as usize][pos.1 as usize] = cost + 1000;
+                            next_queue.push_back((cost + 1001, next, dir));
+                        }
+                    }
+                    cost += 1;
+                    pos = (pos.0 + DIRS[dir].0, pos.1 + DIRS[dir].1);
                 }
             }
+
+            mem::swap(&mut curr_queue, &mut next_queue);
         }
 
+        // Part 2
         let mut dfs_heap = Vec::with_capacity(100);
         for (dir, dir_costs) in min_costs.iter().enumerate() {
             if p1_result == dir_costs[end.0 as usize][end.1 as usize] {
