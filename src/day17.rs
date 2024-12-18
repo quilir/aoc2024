@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, mem};
+use std::mem;
 
 use crate::{utils::parse_usize, Day};
 
@@ -12,7 +12,7 @@ struct Computer {
 }
 
 impl Computer {
-    fn execute_step(&mut self) -> Option<usize> {
+    fn execute(&mut self) -> Option<usize> {
         while self.i < self.instr.len() {
             let op = self.i + 1;
             let literal = || self.instr[op];
@@ -88,33 +88,29 @@ impl Day for Day17 {
             i: 0,
             instr: instr.clone(),
         };
-
+        // println!("{c:?}");
+        // println!("{}", c.execute());
         let mut p1_res = 0;
-        while let Some(v) = c.execute_step() {
+        while let Some(v) = c.execute() {
             p1_res = p1_res * 10 + v;
         }
 
-        let mut valid_registers = VecDeque::with_capacity(50);
-        valid_registers.push_back((0_usize, instr.len()-1));
-        let mut p2_res = -1;
-        while let Some((reg, idx)) = valid_registers.pop_front() {
-            for offset in 0..8 {
-                let reg = (reg << 3) + offset;
-                c.reset_with_a(reg);
-                if c.execute_step() == Some(instr[idx]) {
-                    if idx == 0 {
-                        p2_res = reg as isize;
-                        break;
+        let mut valid_registers = vec![0];
+        let mut next_registers = vec![];
+        for out in instr.into_iter().rev() {
+            for reg in valid_registers.drain(..) {
+                let reg = reg << 3;
+                for offset in 0..8 {
+                    c.reset_with_a(reg + offset);
+                    if c.execute() == Some(out) {
+                        next_registers.push(reg + offset);
                     }
-                    valid_registers.push_back((reg, idx - 1));
                 }
             }
-            if p2_res != -1 {
-                break;
-            }
+            mem::swap(&mut valid_registers, &mut next_registers);
         }
 
-        (p1_res as isize, p2_res)
+        (p1_res as isize, valid_registers[0] as isize)
     }
 
     fn number(&self) -> u8 {
