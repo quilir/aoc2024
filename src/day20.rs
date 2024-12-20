@@ -128,7 +128,10 @@ impl Day for Day20 {
         let mut saves_num_2 = prev_valid_cheats_set.len();
 
         let mut prev = start;
-        for pos in track.into_iter().skip(1) {
+        for pos in track[1..(track.len() - MINIMUM_SAVE as usize)]
+            .iter()
+            .copied()
+        {
             for target in prev_valid_cheats_set.drain(..) {
                 if valid_cheat(pos, target, &dist) {
                     valid_cheats_set.push(target);
@@ -143,7 +146,7 @@ impl Day for Day20 {
                 _ => panic!("Invalid transition"),
             };
             for target_offset in new_nodes_offsets[idx] {
-                let target= pos+target_offset;
+                let target = pos + target_offset;
                 if in_bounds(target) && valid_cheat(pos, target, &dist) {
                     valid_cheats_set.push(target);
                 }
